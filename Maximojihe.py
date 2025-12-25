@@ -15,9 +15,10 @@ def set_favicon():
         return "🔷" # 如果找不到文件，先用这个蓝色方块占位，比狮子专业
 
 # --- 2. CONFIGURACIÓN DE LA PÁGINA ---
+# --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(
     page_title="Máximojihe", 
-    page_icon=set_favicon(), 
+    page_icon="maximojihe.png",  # 必须和 GitHub 里的文件名一模一样（全小写）
     layout="centered"
 )
 
