@@ -8,14 +8,13 @@ import traceback
 # =================================================================
 # 1. 核心安全配置 (ZERO-BUG CONFIG)
 # =================================================================
-# 确保 API 参数名与 OpenAI 库完全对齐，杜绝 TypeError
 API_KEY = "sk-rbafssagtaksrelgfqnzbhdjqtlhdmgthtlwskejckajcejl"
 BASE_URL = "https://api.siliconflow.cn/v1"
 
 st.set_page_config(page_title="Máximojihe", page_icon="maximojihe.png", layout="wide")
 
 # =================================================================
-# 2. 视觉精确对齐 (VISUAL LOGIC)
+# 2. 视觉精确锁定：彻底解决按钮文字不可见问题
 # =================================================================
 st.markdown("""
     <style>
@@ -28,13 +27,11 @@ st.markdown("""
         opacity: 1 !important;
     }
 
-    /* --- 规则 2：有黑框区域强制白字 --- */
-    /* 针对上传组件内部文字 */
+    /* --- 规则 2：有黑框区域（上传和输入）强制白字 --- */
     [data-testid="stFileUploader"] * {
         color: #FFFFFF !important;
     }
     
-    /* 针对输入框内部文字 */
     .stTextArea textarea {
         color: #FFFFFF !important;
         background-color: #1A1C1E !important;
@@ -43,23 +40,30 @@ st.markdown("""
     }
 
     /* --- 区域样式设定 --- */
-    /* 上传框：深色圆角容器 */
     [data-testid="stFileUploader"] {
         background-color: #1A1C1E !important;
         border-radius: 20px !important;
         padding: 20px !important;
     }
 
-    /* 按钮：圆角胶囊黑色背景 */
+    /* --- 核心修复：按钮文字颜色强制锁定 --- */
+    /* 这里的 p 是按钮内部文字的标签，强制改为白色并加阴影 */
     .stButton>button {
         background-color: #000000 !important;
-        color: #FFFFFF !important;
         border-radius: 100px !important;
         padding: 10px 35px !important;
         border: none !important;
-        font-weight: bold !important;
         width: auto !important;
-        min-width: 200px !important;
+        min-width: 220px !important;
+        height: 55px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+    }
+    
+    /* 暴力锁定按钮内所有层级的文字颜色为纯白 */
+    .stButton>button div, .stButton>button p, .stButton>button span {
+        color: #FFFFFF !important;
+        font-weight: bold !important;
+        text-shadow: 0px 0px 3px rgba(255,255,255,0.5) !important;
     }
 
     /* AI 输出区：浅色背景配合黑字 */
@@ -81,11 +85,10 @@ st.markdown("""
 # =================================================================
 class MaxiEngine:
     def __init__(self, key):
-        # 实例化时确保参数名正确，解决 133 行报错
+        # 确保 OpenAI 客户端初始化正常
         self.client = OpenAI(api_key=key, base_url=BASE_URL)
 
     def process_image(self, file):
-        """处理上传图片，包含指针安全重置"""
         if file is None: return None
         try:
             file.seek(0)
@@ -101,7 +104,7 @@ handler = MaxiEngine(API_KEY)
 # =================================================================
 # 4. 界面布局 (UI)
 # =================================================================
-# 顶部 Logo 展示
+# 顶部 Logo
 t_col1, t_col2 = st.columns([0.15, 0.85])
 with t_col1:
     st.image("maximojihe.png", width=110)
@@ -120,7 +123,7 @@ user_text = st.text_area("", placeholder="Describe tu problema...", height=120)
 # =================================================================
 # 5. 执行分析 (EXECUTION)
 # =================================================================
-# 使用放大镜符号模拟你的截图样式
+# 核心功能按钮
 if st.button("🔍 ANALIZAR PASO A PASO"):
     if not up_file and not user_text.strip():
         st.stop()
@@ -141,7 +144,7 @@ if st.button("🔍 ANALIZAR PASO A PASO"):
                     )
                     ocr_text = res.choices[0].message.content
 
-            # 第二阶段：逻辑引导 (输出纯黑字)
+            # 第二阶段：逻辑引导
             sys_msg = (
                 "Eres Máximojihe, un tutor académico. "
                 "Responde en español claro. No des la respuesta final. "
@@ -162,3 +165,5 @@ if st.button("🔍 ANALIZAR PASO A PASO"):
             st.error("Error en la conexión.")
             with st.expander("Details"):
                 st.code(traceback.format_exc())
+
+st.markdown("<br><p style='text-align: center; color: #BBB; font-size: 10px;'>MÁXIMOJIHE SYSTEM</p>", unsafe_allow_html=True)
