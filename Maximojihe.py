@@ -1,3 +1,4 @@
+import os  # 必须放在第一行！
 import streamlit as st
 from openai import OpenAI
 import base64
@@ -5,7 +6,8 @@ from PIL import Image, ImageOps
 import io
 import traceback
 import re
-import os  # 已补全：解决刚才的 NameError
+
+# 后面才是 st.set_page_config 等等...
 
 # =================================================================
 # 1. 核心安全与环境配置 (STABLE CONFIG)
