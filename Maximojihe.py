@@ -2,27 +2,15 @@ import streamlit as st
 from openai import OpenAI
 import base64
 
-# --- 1. 图标硬编码逻辑 (将你的鹿头图片转为代码) ---
-# 这是一个小巧的编码图标，确保标签页不再是地球或狮子
-def set_favicon():
-    # 这是一个通用的数学/教育类图标的Base64，确保它显示为一个独特的蓝色标识
-    # 如果你有特定的 logo.jpg，请确保它在 GitHub 根目录，代码会自动读取
-    try:
-        with open("logo.jpg", "rb") as f:
-            data = base64.b64encode(f.read()).decode()
-            return f"data:image/jpeg;base64,{data}"
-    except:
-        return "🔷" # 如果找不到文件，先用这个蓝色方块占位，比狮子专业
-
-# --- 2. CONFIGURACIÓN DE LA PÁGINA ---
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
+# 确保你仓库里有 logo.png
 st.set_page_config(
     page_title="Máximojihe", 
-    page_icon="maximojihe.png",  # 必须和 GitHub 里的文件名一模一样（全小写）
+    page_icon="maximojihe.png", 
     layout="centered"
 )
 
-# --- 3. 视觉 CSS (白底黑字 + 黑玻璃) ---
+# --- 2. 视觉 CSS (白底黑字 + 黑玻璃 + 对话框优化) ---
 st.markdown("""
     <style>
     .stApp { background-color: #FFFFFF !important; }
@@ -34,53 +22,52 @@ st.markdown("""
         backdrop-filter: blur(15px) !important;
         border-radius: 15px !important;
         padding: 25px !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
     }
     [data-testid="stFileUploader"] * { color: #FFFFFF !important; }
 
-    /* 修复输入框文字 */
+    /* 输入框样式 */
     .stTextArea textarea {
         background-color: #F0F2F6 !important;
         color: #000000 !important;
-        font-size: 16px !important;
     }
 
-    /* Eton 蓝按钮 */
+    /* 按钮：Eton 蓝 */
     .stButton>button {
         background-color: #002D62 !important;
         color: #FFFFFF !important;
         border-radius: 25px !important;
-        width: 100%;
         font-weight: bold !important;
-        height: 3.5em !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. API 初始化 ---
+# --- 3. API 初始化 ---
 API_KEY = "sk-rbafssagtaksrelgfqnzbhdjqtlhdmgthtlwskejckajcejl"
 client = OpenAI(api_key=API_KEY, base_url="https://api.siliconflow.cn/v1")
 
 def encode_image(image_file):
     return base64.b64encode(image_file.read()).decode('utf-8')
 
-# --- 5. 界面展示 ---
-st.title("🔷 Máximojihe")
-st.write("¡Qué onda! Sube una foto o escribe tu duda. Aquí no copiamos, aquí razonamos.")
+# --- 4. 界面布局 ---
+st.title("🦁 Máximojihe")
+st.write("¡Qué onda! Sube tu duda. Aquí no solo damos respuestas, construimos genios.")
 
-uploaded_file = st.file_uploader("1. Sube tu ejercicio:", type=['png', 'jpg', 'jpeg'])
+# 上传区
+uploaded_file = st.file_uploader("1. Sube tu ejercicio (Opcional):", type=['png', 'jpg', 'jpeg'])
 if uploaded_file:
     st.image(uploaded_file, use_container_width=True)
 
-user_text = st.text_area("2. Escribe aquí el problema o tu duda:", placeholder="Ej: No entiendo este paso...")
+# 输入区
+user_text = st.text_area("2. Escribe tu duda aquí:", placeholder="Ej: No entiendo cómo simplificar esto...")
 
-# --- 6. 核心逻辑 (严格禁止答案) ---
-if st.button("🔍 ANALIZAR CON MÁXIMO"):
+# --- 5. 核心逻辑 (聊天图标替换在此) ---
+if st.button("🔍 CONSULTAR CON MÁXIMO"):
     if not uploaded_file and not user_text:
-        st.warning("¡Oye! Pon una foto o escribe algo. 😉")
+        st.warning("¡Oye! Necesito una foto o texto para ayudarte. 😉")
     else:
-        with st.spinner("Máximojihe analizando..."):
+        with st.spinner("Máximojihe está pensando..."):
             try:
+                # 识图逻辑
                 context_img = ""
                 if uploaded_file:
                     base64_img = encode_image(uploaded_file)
@@ -91,28 +78,31 @@ if st.button("🔍 ANALIZAR CON MÁXIMO"):
                     context_img = ocr_res.choices[0].message.content
 
                 st.divider()
-                st.subheader("💡 Guía de Máximojihe")
                 
-                system_prompt = """
-                Eres Máximojihe, tutor del Eton.
-                REGLAS:
-                1. NUNCA des el resultado numérico final.
-                2. PROHIBIDO usar LaTeX (\boxed, \times).
-                3. Explica los pasos con palabras: 'multiplica', 'divide'.
-                4. Si te piden la respuesta, niégate amablemente.
-                """
+                # --- 关键修改：使用鹿头图标显示回复 ---
+                with st.chat_message("assistant", avatar="maximojihe.png"): 
+                    st.subheader("💡 Guía de Máximojihe")
+                    
+                    system_prompt = """
+                    Eres Máximojihe, el tutor más pro del Eton en CDMX.
+                    REGLAS CRÍTICAS:
+                    1. NUNCA des el resultado final.
+                    2. PROHIBIDO usar LaTeX o símbolos raros (\boxed).
+                    3. Guía paso a paso con palabras claras y estilo 'fresa'.
+                    """
 
-                response = client.chat.completions.create(
-                    model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"Problema: {context_img} {user_text}. NO des el resultado."}
-                    ],
-                    stream=True
-                )
-                st.write_stream(response)
+                    response = client.chat.completions.create(
+                        model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": f"Contexto: {context_img}. Duda: {user_text}. NO des la respuesta."}
+                        ],
+                        stream=True
+                    )
+                    st.write_stream(response)
+
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Híjole, algo falló: {e}")
 
 st.markdown("---")
 st.caption("🇲🇽 Eton School | Máximojihe")
