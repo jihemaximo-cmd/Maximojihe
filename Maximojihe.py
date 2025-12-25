@@ -5,34 +5,35 @@ import base64
 # --- 1. 核心修复：强制显色 CSS ---
 st.markdown("""
     <style>
-    /* 1. 强制整页背景和基础文字 */
-    .stApp { background-color: white !important; }
-    h1, h2, h3, p, span, div, label { color: #1e1e1e !important; }
-
-    /* 2. 专门修复那个看不见的上传框 (File Uploader) */
-    /* 强制上传框背景变浅灰色，防止它变成全黑 */
-    [data-testid="stFileUploader"] {
-        background-color: #f8f9fb !important;
-        padding: 10px;
-        border-radius: 10px;
-    }
-    
-    /* 强制上传框里的所有文字（Drag and drop 等）变成深色 */
-    [data-testid="stFileUploader"] section div div {
-        color: #1e1e1e !important;
-    }
-    
-    /* 强制上传框的小图标也变色 */
-    [data-testid="stFileUploader"] svg {
-        fill: #1e1e1e !important;
+    /* 1. 全局暴力清零：强制所有背景白，所有文字黑 */
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        background-color: white !important;
+        color: #1E1E1E !important;
     }
 
-    /* 3. 修复底部的按钮文字颜色 */
+    /* 2. 彻底修复上传框：强制背景色和边框颜色 */
+    [data-testid="stFileUploader"] section {
+        background-color: #F8F9FB !important;
+        border: 2px dashed #002D62 !important;
+        color: #1E1E1E !important;
+    }
+
+    /* 3. 强制上传框内的所有文字变黑（包括那个 Browse files 按钮） */
+    [data-testid="stFileUploader"] * {
+        color: #1E1E1E !important;
+    }
+
+    /* 4. 按钮样式：强制 Eton 蓝底白字 */
     .stButton>button {
-        background-color: #002d62 !important;
+        background-color: #002D62 !important;
         color: white !important;
-        border: none !important;
+        border-radius: 20px !important;
     }
+
+    /* 5. 隐藏 Streamlit 右上角的小红点和菜单，减少干扰 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
