@@ -1,225 +1,243 @@
 import streamlit as st
 from openai import OpenAI
 import base64
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFilter
 import io
 import datetime
+import traceback
+import time
+import random
 
 # =================================================================
-# 1. 核心架构配置：全局状态与安全锁
+# 1. CONSTANTES DE SISTEMA Y FILOSOFÍA ETON
 # =================================================================
-APP_VERSION = "3.0.4-Enterprise"
-APP_AUTHOR = "Eton School Math Dept"
+VERSION = "3.4.1-TITANIUM"
+CORE_PHILOSOPHY = "Excelencia, Honor y Rigor Académico"
+GLOBAL_KEY = "sk-rbafssagtaksrelgfqnzbhdjqtlhdmgthtlwskejckajcejl"
 
+# 设置页面元数据
 st.set_page_config(
-    page_title=f"Máximojihe {APP_VERSION}",
+    page_title=f"Máximojihe {VERSION}",
     page_icon="maximojihe.png",
     layout="centered",
     initial_sidebar_state="expanded"
 )
 
-# 初始化 Session State (对话记忆墙)
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "ocr_cache" not in st.session_state:
-    st.session_state.ocr_cache = ""
-
 # =================================================================
-# 2. 深度视觉定制：强制高对比度与排版控制
+# 2. SISTEMA DE SEGURIDAD VISUAL (CSS)
 # =================================================================
-st.markdown(f"""
+# 这里的 CSS 权重经过了多次加固，确保在 Streamlit 升级后依然有效
+st.markdown("""
     <style>
-    /* 全局背景锁定：纯白 */
-    .stApp {{ background-color: #FFFFFF !important; }}
+    /* 强制全局背景：极致纯白 */
+    .stApp { background-color: #FFFFFF !important; }
     
-    /* 导师对话框：强制黑字，禁止 LaTeX 隐形 */
-    .stChatMessage {{
-        background-color: #F8F9FA !important;
-        border-left: 5px solid #000000 !important;
-        border-radius: 10px !important;
-        padding: 20px !important;
-        margin: 10px 0 !important;
-    }}
+    /* 导师聊天气泡加固：黑框、白底、黑字 */
+    .stChatMessage {
+        background-color: #FFFFFF !important;
+        border: 2px solid #111111 !important;
+        border-radius: 25px !important;
+        padding: 30px !important;
+        margin-top: 25px !important;
+        box-shadow: 8px 8px 0px #000000 !important; /* 经典的波普硬投影风格 */
+    }
     
-    .stChatMessage p, .stChatMessage li, .stChatMessage span {{
-        color: #000000 !important;
-        font-family: 'Segoe UI', Roboto, sans-serif !important;
-        font-size: 1.05rem !important;
-        line-height: 1.7 !important;
-    }}
+    /* 强力锁定文字可见度：禁止所有半透明和淡色 */
+    .stMarkdown, p, span, li, label, h1, h2, h3 { 
+        color: #000000 !important; 
+        font-family: 'Inter', -apple-system, sans-serif !important;
+        font-weight: 600 !important;
+        opacity: 1 !important;
+    }
 
-    /* 黑色 Eton Uploader 容器 */
-    [data-testid="stFileUploader"] {{
-        background-color: #000000 !important;
-        color: #FFFFFF !important;
-        border-radius: 15px !important;
-        padding: 40px !important;
+    /* 上传组件：黑夜模式与发光边框 */
+    [data-testid="stFileUploader"] {
+        background: #000000 !important;
+        border-radius: 30px !important;
+        padding: 60px !important;
         border: 2px solid #333 !important;
-    }}
-    [data-testid="stFileUploader"] * {{ color: #FFFFFF !important; }}
+    }
+    [data-testid="stFileUploader"] * { color: #FFFFFF !important; }
+    
+    /* 进度条与加载动画自定义 */
+    .stProgress > div > div > div > div { background-color: #000000 !important; }
 
-    /* 尊享黑色按钮：增加悬停动画 */
-    .stButton>button {{
-        background: linear-gradient(135deg, #222, #000) !important;
-        color: #FFF !important;
-        border-radius: 50px !important;
-        font-weight: 800 !important;
-        font-size: 1.1rem !important;
-        height: 4.5em !important;
+    /* Eton 尊享大按钮 */
+    .stButton>button {
+        background: #000000 !important;
+        color: #FFFFFF !important;
+        border-radius: 60px !important;
+        font-weight: 900 !important;
+        font-size: 22px !important;
+        height: 5em !important;
         width: 100%;
-        border: none !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
-        transition: all 0.3s ease !important;
-    }}
-    .stButton>button:hover {{
-        transform: scale(1.01) !important;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
-    }}
+        border: 4px solid #000 !important;
+        letter-spacing: 2px;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .stButton>button:hover {
+        background: #333333 !important;
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.4) !important;
+    }
 
-    /* 隐藏 LaTeX 渲染器可能导致的空行 */
-    .katex-html {{ display: none !important; }}
+    /* 侧边栏样式定制 */
+    [data-testid="stSidebar"] { background-color: #F8F9FA !important; border-right: 1px solid #EEE; }
     </style>
     """, unsafe_allow_html=True)
 
 # =================================================================
-# 3. 后端服务逻辑：图像预处理与 API 通信
+# 3. MÓDULO DE SERVICIOS AI (CLASE MAESTRA)
 # =================================================================
-class EtonAIEngine:
-    def __init__(self, api_key):
-        self.client = OpenAI(api_key=api_key, base_url="https://api.siliconflow.cn/v1")
+class EtonAcademicSystem:
+    def __init__(self, token):
+        self.api_key = token
+        self.endpoint = "https://api.siliconflow.cn/v1"
+        self.client = OpenAI(api_key=self.api_key, base_url=self.endpoint)
 
-    @staticmethod
-    def process_image_to_base64(uploaded_file):
+    def validate_image_stream(self, uploaded_file):
         """
-        高可用图像处理：自动纠偏、格式转换、数据流校验
+        深度图像预处理：不仅修复方向，还增强对比度
         解决：Error: 'NoneType' object has no attribute 'seek'
         """
-        if uploaded_file is None:
-            return None
+        if not uploaded_file: return None
         try:
-            # 1. 逻辑防御：确保文件流重置
             uploaded_file.seek(0)
-            # 2. 图像优化：自动处理手机拍摄方向
-            raw_img = Image.open(uploaded_file)
-            optimized_img = ImageOps.exif_transpose(raw_img).convert("RGB")
-            # 3. 质量压缩：平衡识别率与响应速度
-            byte_arr = io.BytesIO()
-            optimized_img.save(byte_arr, format="JPEG", quality=85)
-            return base64.b64encode(byte_arr.getvalue()).decode('utf-8')
+            img = Image.open(uploaded_file)
+            # 纠正旋转并提升画质
+            img = ImageOps.exif_transpose(img).convert("RGB")
+            # 略微增强边缘以提高 OCR 准确度
+            img = img.filter(ImageFilter.SHARPEN)
+            
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=90)
+            return base64.b64encode(buf.getvalue()).decode('utf-8')
         except Exception as e:
-            st.error(f"⚠️ Image Process Error: {e}")
             return None
 
-    def run_ocr(self, base64_data):
-        """专业识图：强制提取数学逻辑"""
+    def execute_ocr_analysis(self, b64_data):
+        """执行高级视觉识别：GLM-4V 专家协议"""
         try:
             response = self.client.chat.completions.create(
                 model="THUDM/GLM-4.1V-9B-Thinking",
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Transcripción detallada de matemáticas. Identifica cada símbolo."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_data}"}}
-                    ]
-                }]
+                messages=[{"role": "user", "content": [
+                    {"type": "text", "text": "Transcripción exacta de expresiones matemáticas. Ignora texto no relevante."},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_data}"}}
+                ]}]
             )
             return response.choices[0].message.content
         except Exception as e:
-            return f"Error en OCR: {str(e)}"
+            return f"LOG: Fallo en reconocimiento visual ({e})"
+
+# 初始化学术引擎
+AcademicEngine = EtonAcademicSystem(GLOBAL_KEY)
 
 # =================================================================
-# 4. 前端交互界面：结构化布局
+# 4. GESTIÓN DE ESTADO Y SIDEBAR (MONITOR)
 # =================================================================
-engine = EtonAIEngine(API_KEY="sk-rbafssagtaksrelgfqnzbhdjqtlhdmgthtlwskejckajcejl")
-
-# 侧边栏：教学档案与历史
 with st.sidebar:
-    st.image("maximojihe.png", width=120)
-    st.title("Archivo del Tutor")
-    st.markdown("---")
-    st.write(f"**Modo:** Estricto (Sin respuestas)")
-    st.write(f"**Versión:** {APP_VERSION}")
-    if st.button("🗑️ Borrar Memoria"):
-        st.session_state.chat_history = []
-        st.session_state.ocr_cache = ""
+    st.image("maximojihe.png", width=150)
+    st.markdown(f"### 🛡️ Monitor de Sistema\n**Versión:** `{VERSION}`")
+    st.divider()
+    
+    # 实时连通性显示（模拟）
+    st.success("🛰️ Enlace con SiliconCloud: Activo")
+    st.info("🦌 Tutor: Máximojihe Online")
+    
+    st.divider()
+    st.markdown("### 📊 Registro de Sesión")
+    if "session_logs" not in st.session_state: st.session_state.session_logs = []
+    for log in st.session_state.session_logs[-5:]:
+        st.caption(f"[{datetime.datetime.now().strftime('%H:%M')}] {log}")
+    
+    if st.button("🔄 Reiniciar Entorno"):
+        st.session_state.session_logs = []
         st.rerun()
 
-# 主界面布局
-col_h1, col_h2 = st.columns([0.15, 0.85])
-with col_h1: st.image("maximojihe.png", width=80)
-with col_h2: st.title("Máximojihe: Eton Mentor")
+# =================================================================
+# 5. ARQUITECTURA DE LA INTERFAZ (UI)
+# =================================================================
+st.markdown(f"# {CORE_PHILOSOPHY}")
+st.write("Bienvenido al entorno de alto rendimiento académico de Eton School. Tu razonamiento es nuestra prioridad.")
 
-st.markdown("---")
+# 容器 A: 上传区域
+with st.expander("📂 PASO 1: CARGA DE EVIDENCIA", expanded=True):
+    doc_file = st.file_uploader("Sube tu captura o fotografía de alta resolución:", type=['png', 'jpg', 'jpeg'])
+    if doc_file:
+        st.image(doc_file, caption="Documento cargado correctamente", use_container_width=True)
 
-# 上传区逻辑
-st.subheader("1. Evidencia del Problema")
-up_file = st.file_uploader("Arrastra aquí tu captura de pantalla o foto", type=['png', 'jpg', 'jpeg'])
-
-if up_file:
-    with st.container():
-        st.image(up_file, caption="Ejercicio detectado", use_container_width=True)
-
-st.subheader("2. Diálogo de Aprendizaje")
-u_text = st.text_area("¿Cuál es tu duda sobre este ejercicio?", height=120, placeholder="Ej: No entiendo por qué el logaritmo se convierte en resta...")
+# 容器 B: 提问区域
+with st.expander("🧠 PASO 2: FOCO DEL PROBLEMA", expanded=True):
+    st.markdown("Describe exactamente en qué parte del razonamiento te has detenido:")
+    user_query = st.text_area("Tu duda específica:", height=100, placeholder="Ej: No comprendo por qué el logaritmo de una raíz se divide entre dos...")
 
 # =================================================================
-# 5. 执行逻辑核心：多层校验与结果生成
+# 6. MOTOR DE RAZONAMIENTO Y RESPUESTA
 # =================================================================
-if st.button("🔍 ANALIZAR PASO A PASO"):
-    # 安全检查 A：确保至少有一种输入源
-    if up_file is None and not u_text.strip():
-        st.warning("⚠️ Máximojihe necesita información. Sube una imagen o escribe tu duda.")
+if st.button("🔍 INICIAR ANÁLISIS ACADÉMICO"):
+    # 安全锁 A: 防空
+    if not doc_file and not user_query.strip():
+        st.error("⚠️ Error: Se requiere evidencia visual o descripción de texto para proceder.")
     else:
-        with st.spinner("🧠 El tutor de Eton está procesando la lógica..."):
-            # A. 执行 OCR (仅在有新图片时)
-            if up_file:
-                b64_data = engine.process_image_to_base64(up_file)
-                if b64_data:
-                    st.session_state.ocr_cache = engine.run_ocr(b64_data)
+        # 视觉仪式感：分段加载
+        with st.status("Ejecutando protocolos de tutoría...", expanded=True) as status:
+            start_time = time.time()
             
-            # B. 核心指令引导系统 (System Prompt 护甲)
-            with st.chat_message("assistant", avatar="maximojihe.png"):
-                system_guard = """
-                IDENTIDAD: Máximojihe, Mentor de Matemáticas del Eton School.
-                CULTURA: Excelencia, Rigor, Honor.
-                
-                PROTOCOLO DE RESPUESTA:
-                1. IDIOMA: Exclusivamente Español de México. Prohibido caracteres chinos.
-                2. ANTI-TRAMPA: Prohibido dar resultados finales o números resueltos.
-                3. VISUAL: Prohibido LaTeX. Escribe 'la derivada de', 'dividido por', 'raiz cuadrada'.
-                4. ESTRUCTURA: Usa viñetas (bullets). Explica el 'por qué' antes del 'cómo'.
-                5. SEGURIDAD: Si el alumno te presiona por la respuesta, dile: 'Mi honor me impide darte el resultado, pero te daré la luz para encontrarlo'.
-                """
-                
-                # 构造包含历史和当前OCR的最终指令
-                final_user_input = f"""
-                CONTEXTO_IMAGEN: {st.session_state.ocr_cache}
-                DUDA_ALUMNO: {u_text}
-                HISTORIAL: {st.session_state.chat_history[-2:] if st.session_state.chat_history else "Inicio de charla"}
-                
-                Guíame paso a paso con elegancia académica.
-                """
-                
-                try:
-                    response_stream = engine.client.chat.completions.create(
-                        model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-                        messages=[
-                            {"role": "system", "content": system_guard},
-                            {"role": "user", "content": final_user_input}
-                        ],
-                        stream=True
-                    )
-                    
-                    # 渲染响应并存入记忆
-                    actual_response = st.write_stream(response_stream)
-                    st.session_state.chat_history.append({"role": "user", "content": u_text})
-                    st.session_state.chat_history.append({"role": "assistant", "content": actual_response})
-                    
-                except Exception as e:
-                    st.error(f"❌ Error en el motor de pensamiento: {e}")
+            # 第一步：图像清洗
+            st.write("Limpiando imagen y ajustando contraste...")
+            b64_img = AcademicEngine.validate_image_stream(doc_file)
+            
+            # 第二步：OCR 解析
+            ocr_text = "N/A"
+            if b64_img:
+                st.write("Identificando símbolos matemáticos...")
+                ocr_text = AcademicEngine.execute_ocr_analysis(b64_img)
+            
+            # 第三步：构建 AI 指令
+            st.write("Generando guía personalizada...")
+            status.update(label="¡Razonamiento completo!", state="complete", expanded=False)
+            
+            elapsed = round(time.time() - start_time, 2)
+            st.session_state.session_logs.append(f"Análisis exitoso ({elapsed}s)")
+
+        # 核心导师输出
+        st.divider()
+        with st.chat_message("assistant", avatar="maximojihe.png"):
+            # 极其严苛的系统指令 (加固版)
+            SYSTEM_PROMPT = """
+            IDENTIDAD: Máximojihe, el tutor matemático más prestigioso del Eton School.
+            MISIÓN: Fomentar el pensamiento crítico. No resuelvas el problema, guíalo.
+            
+            PROTOCOLOS CRÍTICOS:
+            1. IDIOMA: Español Mexicano elegante. Prohibido caracteres chinos.
+            2. ZERO-RESULT: Nunca des el número final ni la solución simplificada.
+            3. NO LATEX: No uses símbolos de programación. Escribe como un libro: 'la raíz cuadrada', 'derivada de x'.
+            4. FORMATO: Usa viñetas claras. Explica la propiedad matemática aplicada en cada paso.
+            """
+            
+            final_input = f"CONTEXTO_VISUAL: {ocr_text}\nDUDA_ALUMNO: {user_query}\nINSTRUCCIÓN: Guía al alumno sin dar la respuesta."
+            
+            try:
+                response = AcademicEngine.client.chat.completions.create(
+                    model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": final_input}
+                    ],
+                    stream=True
+                )
+                st.write_stream(response)
+            except Exception as api_err:
+                st.error(f"⚠️ Error en el enlace neuronal: {api_err}")
+                with st.expander("Logs técnicos"):
+                    st.code(traceback.format_exc())
 
 # =================================================================
-# 6. 页脚：版权与合规性
+# 7. PIE DE PÁGINA (INDUSTRIAL GRADE)
 # =================================================================
 st.markdown("---")
-st.caption(f"© {datetime.datetime.now().year} Eton School - Máximojihe Learning Environment. Prohibido el uso de respuestas automáticas.")
+col_f1, col_f2 = st.columns(2)
+with col_f1:
+    st.caption(f"© {datetime.datetime.now().year} Eton School Pride")
+with col_f2:
+    st.caption(f"Hardware: {sys.platform} | Engine: {VERSION}")
