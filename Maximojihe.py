@@ -151,6 +151,4 @@ if st.button("🔍 INICIAR ANÁLISIS"):
 
 # 页脚：天才认证
 st.markdown("---")
-st.caption(f"© 2025 Eton School | Made by Maxi (Maximojihe
-
-                                                           --la inteligencia artificial que te ayuda.)")
+st.caption(f"© 2025 Eton School | Made by Maxi (Maximojihe--la inteligencia artificial que te ayuda.)")
