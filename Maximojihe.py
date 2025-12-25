@@ -3,205 +3,170 @@ from openai import OpenAI
 import base64
 from PIL import Image, ImageOps
 import io
-import sys
 import traceback
 
 # =================================================================
-# 1. 系统核心配置 (CORE ARCHITECTURE)
+# 1. 核心配置 (CORE)
 # =================================================================
 API_KEY = "sk-rbafssagtaksrelgfqnzbhdjqtlhdmgthtlwskejckajcejl"
 BASE_URL = "https://api.siliconflow.cn/v1"
 
-st.set_page_config(
-    page_title="Máximojihe: Tutor de Élite",
-    page_icon="maximojihe.png",
-    layout="wide" # 使用宽屏布局以匹配截屏的比例
-)
+st.set_page_config(page_title="Máximojihe", page_icon="maximojihe.png", layout="wide")
 
 # =================================================================
-# 2. 视觉精确还原系统 (PIXEL PERFECT CSS)
+# 2. 视觉加固：深色背景白字 + 浅色背景黑字
 # =================================================================
 st.markdown("""
     <style>
-    /* 强制全局白底黑字，解决所有不可见问题 */
+    /* 基础背景 */
     .stApp { background-color: #FFFFFF !important; }
-    
-    /* 锁定所有文字：漆黑、无透明度、清晰 */
-    .stMarkdown, p, span, li, label, h1, h2, h3, div { 
-        color: #000000 !important; 
-        opacity: 1 !important;
-        font-family: 'Inter', -apple-system, sans-serif !important;
-    }
 
-    /* 顶部 Logo 容器布局 */
-    .header-container {
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-    /* 上传区域：大圆角胶囊黑底 (完全匹配截屏1) */
-    [data-testid="stFileUploader"] {
-        background-color: #1A1C1E !important;
-        border-radius: 40px !important;
-        padding: 30px !important;
-        border: none !important;
-        margin-top: 10px !important;
-    }
-    [data-testid="stFileUploader"] * { color: #FFFFFF !important; }
-    /* 隐藏上传组件的多余边框 */
-    [data-testid="stFileUploader"] section { border: none !important; }
-
-    /* 输入区域：深色背景矩形 (完全匹配截屏) */
-    .stTextArea textarea {
-        background-color: #1A1C1E !important;
+    /* --- 核心修复：深色容器内的文字强制设为带轮廓的白字 --- */
+    [data-testid="stFileUploader"] *, 
+    .stTextArea textarea,
+    label[data-testid="stWidgetLabel"] p {
         color: #FFFFFF !important;
-        border-radius: 15px !important;
-        border: none !important;
-        padding: 15px !important;
+        text-shadow: 1px 1px 2px #000000 !important; /* 增加黑轮廓确保清晰 */
+        opacity: 1 !important;
     }
 
-    /* 分析按钮：左对齐胶囊设计 + 放大镜符号 (完全匹配截屏3) */
+    /* --- 核心修复：输出区域强制设为黑字 --- */
+    .stChatMessage p, .stChatMessage span {
+        color: #000000 !important;
+        text-shadow: none !important;
+    }
+
+    /* 上传框：深色圆角矩形 (匹配截屏) */
+    [data-testid="stFileUploader"] {
+        background-color: #1E1E26 !important;
+        border-radius: 25px !important;
+        border: 1px solid #333 !important;
+        padding: 20px !important;
+    }
+
+    /* 输入框：深色圆角矩形 (匹配截屏) */
+    .stTextArea textarea {
+        background-color: #1E1E26 !important;
+        border-radius: 15px !important;
+        border: 1px solid #333 !important;
+    }
+
+    /* 按钮：左对齐黑色胶囊 + 放大镜 (匹配截屏) */
     .stButton>button {
         background-color: #000000 !important;
         color: #FFFFFF !important;
-        border-radius: 50px !important;
-        padding: 10px 30px !important;
+        border-radius: 100px !important;
+        padding: 10px 40px !important;
         border: none !important;
         font-weight: bold !important;
-        text-align: left !important;
         display: flex !important;
         align-items: center !important;
         width: auto !important;
-        min-width: 200px !important;
-        height: 50px !important;
-        font-size: 14px !important;
+        min-width: 240px !important;
+        height: 55px !important;
+        font-size: 16px !important;
     }
-    .stButton>button:hover {
-        background-color: #333333 !important;
-        color: #FFFFFF !important;
+    
+    /* 聊天气泡：浅灰色方便阅读黑字 */
+    .stChatMessage {
+        background-color: #F0F2F6 !important;
+        border-radius: 15px !important;
     }
 
-    /* 隐藏 Streamlit 官方杂质 */
+    /* 隐藏杂质 */
     #MainMenu, footer, header { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
 # =================================================================
-# 3. 工业级后端引擎 (ENGINE BLOCK)
+# 3. 后端稳定引擎 (ENGINE)
 # =================================================================
-class MaximojiheBackend:
-    """
-    后端处理类，包含图像流控制与 API 路由。
-    修复了所有已知的 TypeError 和指针溢出问题。
-    """
+class MaxiAI:
     def __init__(self, key):
-        # 正确初始化 OpenAI 客户端，解决 133 行报错
-        self.api_key = key
-        self.client = OpenAI(api_key=self.api_key, base_url=BASE_URL)
+        # 修复实例化参数名，确保不报错
+        self.client = OpenAI(api_key=key, base_url=BASE_URL)
 
-    def process_image_to_base64(self, uploaded_file):
-        """
-        转换上传文件为 Base64。
-        包含指针安全重置 (Seek 0)。
-        """
-        if uploaded_file is None:
-            return None
+    def process_img(self, file):
+        if file is None: return None
         try:
-            uploaded_file.seek(0)
-            raw_img = Image.open(uploaded_file)
-            # 自动修复 EXIF 旋转
-            fixed_img = ImageOps.exif_transpose(raw_img).convert("RGB")
-            
-            # 转换为内存字节流
-            buffer = io.BytesIO()
-            fixed_img.save(buffer, format="JPEG", quality=95)
-            return base64.b64encode(buffer.getvalue()).decode('utf-8')
-        except Exception as e:
-            st.error(f"Error en matriz de imagen: {e}")
-            return None
+            file.seek(0)
+            img = ImageOps.exif_transpose(Image.open(file)).convert("RGB")
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=90)
+            return base64.b64encode(buf.getvalue()).decode('utf-8')
+        except: return None
 
-# 启动核心
-engine = MaximojiheBackend(API_KEY)
+# 启动
+handler = MaxiAI(API_KEY)
 
 # =================================================================
-# 4. 界面布局还原 (LAYOUT RECONSTRUCTION)
+# 4. 界面布局 (UI)
 # =================================================================
-# 顶部区域：Logo 与 标题
-col_logo, col_title = st.columns([0.15, 0.85])
-with col_logo:
-    st.image("maximojihe.png", width=120)
-with col_title:
-    st.markdown("<h1 style='margin-top:20px;'>Máximojihe: Tutor de Élite</h1>", unsafe_allow_html=True)
+# 顶部 Logo 和标题
+t_col1, t_col2 = st.columns([0.15, 0.85])
+with t_col1:
+    st.image("maximojihe.png", width=110)
+with t_col2:
+    st.markdown("<h1 style='color:black !important; margin-top:20px;'>Máximojihe</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#555 !important;'>Tutoría académica profesional.</p>", unsafe_allow_html=True)
 
-st.markdown("<p style='font-size:14px; color:#555;'>Sube tu ejercicio. Mi misión es tu aprendizaje, no darte la respuesta. 🦌</p>", unsafe_allow_html=True)
+st.write("---")
 
-# 核心功能区
-st.write("")
+# 上传区
 st.markdown("**Sube tu imagen aquí:**")
-doc_input = st.file_uploader("", type=['png', 'jpg', 'jpeg'], key="uploader_main")
+file = st.file_uploader("", type=['png', 'jpg', 'jpeg'])
+if file:
+    st.image(file, use_container_width=True)
 
-if doc_input:
-    st.image(doc_input, use_container_width=True)
-
-st.write("")
+# 输入区
 st.markdown("**¿Qué te genera duda?**")
-user_text = st.text_area("", placeholder="Describe lo que ves si la imagen no es clara...", height=120, key="query_main")
+query = st.text_area("", placeholder="Describe el problema aquí...", height=120)
 
 # =================================================================
-# 5. 执行逻辑 (THE BRAIN)
+# 5. 分析执行 (EXECUTION)
 # =================================================================
-# 按钮文字包含放大镜 Emoji，模拟截屏中的图标
+# 按钮文本带放大镜符号 🔍
 if st.button("🔍 ANALIZAR PASO A PASO"):
-    if not doc_input and not user_text.strip():
+    if not file and not query.strip():
         st.stop()
 
     with st.chat_message("assistant", avatar="maximojihe.png"):
         try:
-            # 1. 视觉分析层
-            context_data = ""
-            if doc_input:
-                b64_string = engine.process_image_to_base64(doc_input)
-                if b64_string:
-                    ocr_res = engine.client.chat.completions.create(
+            # 第一步：识图
+            ocr_info = ""
+            if file:
+                b64 = handler.process_img(file)
+                if b64:
+                    res = handler.client.chat.completions.create(
                         model="THUDM/GLM-4.1V-9B-Thinking",
-                        messages=[{
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": "Extract math structure."},
-                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_string}"}}
-                            ]
-                        }]
+                        messages=[{"role": "user", "content": [
+                            {"type": "text", "text": "Math text extraction."},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
+                        ]}]
                     )
-                    context_data = ocr_res.choices[0].message.content
+                    ocr_info = res.choices[0].message.content
 
-            # 2. 逻辑引导层
-            # 纯粹的专业导师指令，不带冗余标签
-            sys_instr = (
-                "Eres Máximojihe, un tutor experto. "
-                "No des la respuesta final. Guía al alumno. "
-                "Responde en español claro. "
-                "No uses LaTeX. Escribe 'raiz de', 'cuadrado', etc."
+            # 第二步：解答 (黑字输出)
+            sys_p = (
+                "Eres Máximojihe, un tutor serio. "
+                "No des resultados, solo pasos. "
+                "Responde en español. No uses LaTeX ni símbolos raros. "
+                "Escribe texto plano para que sea fácil de leer."
             )
             
-            full_user_input = f"Problema: {context_data}\nDuda: {user_text}"
-            
-            response = engine.client.chat.completions.create(
+            stream = handler.client.chat.completions.create(
                 model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
                 messages=[
-                    {"role": "system", "content": sys_instr},
-                    {"role": "user", "content": full_user_input}
+                    {"role": "system", "content": sys_p},
+                    {"role": "user", "content": f"Contexto: {ocr_info}\nDuda: {query}"}
                 ],
                 stream=True
             )
-            st.write_stream(response)
+            st.write_stream(stream)
 
-        except Exception as critical_err:
-            st.error("Error en el razonamiento del sistema.")
-            with st.expander("Detalles"):
+        except Exception as e:
+            st.error("Error en la conexión.")
+            with st.expander("Debug"):
                 st.code(traceback.format_exc())
 
-# =================================================================
-# 6. 页脚
-# =================================================================
-st.markdown("<br><p style='text-align: center; color: #BBB; font-size: 10px;'>MÁXIMOJIHE ACADEMIC ENGINE</p>", unsafe_allow_html=True)
+st.markdown("<br><p style='text-align:center; color:#AAA; font-size:10px;'>MÁXIMOJIHE PRO</p>", unsafe_allow_html=True)
