@@ -9,7 +9,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. 视觉 CSS (黑玻璃风格全家桶) ---
+# --- 2. 视觉 CSS (黑玻璃按钮 + 纯白文字修复版) ---
 st.markdown("""
     <style>
     /* 核心：高清渲染算法 */
@@ -42,26 +42,42 @@ st.markdown("""
     }
     [data-testid="stFileUploader"] * { color: #FFFFFF !important; }
 
-    /* --- 🆕 新增：黑玻璃按钮样式 --- */
+    /* --- 🆕 修复：黑玻璃按钮 + 强制白字 --- */
     .stButton>button {
-        /* 黑色半透明磨砂背景 */
-        background: rgba(30, 30, 30, 0.85) !important;
+        /* 深黑色玻璃背景 */
+        background-color: #1a1a1a !important; 
+        background: rgba(20, 20, 20, 0.9) !important;
         backdrop-filter: blur(15px) !important;
-        /* 白色醒目文字 */
-        color: #FFFFFF !important;
-        /* 边框和圆角 */
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        
+        /* 强制文字纯白 */
+        color: #FFFFFF !important; 
+        
+        /* 白色细边框，增加对比度 */
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 30px !important;
         font-weight: 800 !important;
         height: 3.5em !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
     }
-    /* 鼠标悬停效果：稍微变亮，浮起 */
+
+    /* 确保按钮里的文字（如果是 p 标签）也是白色的 */
+    .stButton>button p {
+        color: #FFFFFF !important;
+    }
+
+    /* 鼠标悬停效果：边框变亮，文字保持白 */
     .stButton>button:hover {
-        background: rgba(50, 50, 50, 0.95) !important;
+        background: rgba(0, 0, 0, 1) !important; /* 悬停变更黑 */
+        color: #FFFFFF !important;
+        border-color: #FFFFFF !important; /* 边框全白 */
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.3) !important;
+    }
+    
+    /* 点击效果 */
+    .stButton>button:active {
+        color: #FFFFFF !important;
+        background: #000000 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -89,7 +105,7 @@ if uploaded_file:
 
 user_text = st.text_area("2. Escribe tu duda:", placeholder="Ej: ¿Cómo empiezo este problema?")
 
-# 这个按钮现在是黑玻璃风格了！
+# 按钮区域
 if st.button("🔍 ANALIZAR CON MÁXIMO"):
     if not uploaded_file and not user_text:
         st.warning("¡Oye! Pon algo para que pueda ayudarte. 😉")
