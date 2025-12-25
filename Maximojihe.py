@@ -5,48 +5,53 @@ import base64
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(
     page_title="Máximojihe", 
-    page_icon="maximojihe.png", # 浏览器标签页图标
+    page_icon="maximojihe.png", 
     layout="centered"
 )
 
-# --- 2. 视觉 CSS 优化 (高清渲染 + 界面样式) ---
+# --- 2. 4K 极清视觉优化 CSS ---
 st.markdown("""
     <style>
-    /* 强制图片高清渲染，防止缩放模糊 */
+    /* 核心：高清渲染算法 */
     img {
         image-rendering: -webkit-optimize-contrast !important;
         image-rendering: crisp-edges !important;
+        -ms-interpolation-mode: nearest-neighbor !important;
     }
 
-    /* 页面背景白色 */
+    /* 优化聊天头像：增加像素密度感 */
+    [data-testid="stChatMessageAvatarAssistant"] {
+        width: 40px !important;
+        height: 40px !important;
+        border: 1px solid rgba(0,0,0,0.05); /* 极细边框增加精致感 */
+        border-radius: 10px !important;
+        overflow: hidden !important;
+    }
+
+    /* 页面基础样式 */
     .stApp { background-color: #FFFFFF !important; }
-    
-    /* 文字颜色 */
     h1, h2, h3, p, span, label { color: #1E1E1E !important; }
 
-    /* 黑玻璃效果上传框 */
+    /* 黑玻璃上传框 */
     [data-testid="stFileUploader"] {
         background: rgba(30, 30, 30, 0.95) !important;
-        backdrop-filter: blur(15px) !important;
-        border-radius: 15px !important;
+        backdrop-filter: blur(20px) !important;
+        border-radius: 20px !important;
         padding: 25px !important;
     }
     [data-testid="stFileUploader"] * { color: #FFFFFF !important; }
 
-    /* 聊天头像高清化 */
-    [data-testid="stChatMessageAvatarAssistant"] img {
-        width: 40px !important;
-        height: 40px !important;
-        border-radius: 8px !important;
-    }
-
-    /* Eton 蓝按钮 */
+    /* 按钮：Eton 蓝色 */
     .stButton>button {
         background-color: #002D62 !important;
         color: #FFFFFF !important;
-        border-radius: 25px !important;
-        font-weight: bold !important;
-        height: 3.5em !important;
+        border-radius: 30px !important;
+        font-weight: 800 !important;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #003d85 !important;
+        transform: scale(1.02);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -58,31 +63,28 @@ client = OpenAI(api_key=API_KEY, base_url="https://api.siliconflow.cn/v1")
 def encode_image(image_file):
     return base64.b64encode(image_file.read()).decode('utf-8')
 
-# --- 4. 界面布局 ---
-# 使用 st.columns 优化顶部 LOGO 显示，防止拉伸
+# --- 4. 页面头部 ---
 col1, col2 = st.columns([0.15, 0.85])
 with col1:
-    # 这里的 width=60 是为了在保持清晰度的同时控制大小
-    st.image("maximojihe.png", width=60) 
+    # 针对 4K 屏幕，手动控制显示宽度
+    st.image("maximojihe.png", width=65) 
 with col2:
     st.title("Máximojihe")
 
-st.write("¡Qué onda! Sube tu duda. Aquí razonamos como cracks.")
+st.write("¡Qué onda! Sube tu duda y vamos a resolverla paso a paso.")
 
-# 上传
+# --- 5. 功能区 ---
 uploaded_file = st.file_uploader("1. Sube tu ejercicio:", type=['png', 'jpg', 'jpeg'])
 if uploaded_file:
     st.image(uploaded_file, use_container_width=True)
 
-# 输入
-user_text = st.text_area("2. Escribe tu duda aquí:", placeholder="Ej: No entiendo este paso...")
+user_text = st.text_area("2. Escribe tu duda:", placeholder="Ej: ¿Cómo empiezo este problema?")
 
-# --- 5. 核心逻辑 (AI 回复头像) ---
-if st.button("🔍 CONSULTAR CON MÁXIMO"):
+if st.button("🔍 ANALIZAR CON MÁXIMO"):
     if not uploaded_file and not user_text:
         st.warning("¡Oye! Pon algo para que pueda ayudarte. 😉")
     else:
-        with st.spinner("Máximojihe está pensando..."):
+        with st.spinner("Máximojihe analizando..."):
             try:
                 context_img = ""
                 if uploaded_file:
@@ -95,26 +97,24 @@ if st.button("🔍 CONSULTAR CON MÁXIMO"):
 
                 st.divider()
                 
-                # 聊天消息头像使用本地高清原图
+                # 聊天头像使用高清原图
                 with st.chat_message("assistant", avatar="maximojihe.png"):
                     system_prompt = """
-                    Eres Máximojihe, el tutor pro del Eton CDMX. 
-                    REGLAS:
+                    Eres Máximojihe, el tutor pro del Eton. 
                     1. NUNCA des el resultado final.
                     2. PROHIBIDO usar LaTeX (\boxed{}).
-                    3. Guía paso a paso con palabras.
+                    3. Guía paso a paso con palabras claras.
                     """
 
                     response = client.chat.completions.create(
                         model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
                         messages=[
                             {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": f"Contexto: {context_img}. Duda: {user_text}. NO des la respuesta."}
+                            {"role": "user", "content": f"Problema: {context_img} {user_text}. NO des la respuesta final."}
                         ],
                         stream=True
                     )
                     st.write_stream(response)
-
             except Exception as e:
                 st.error(f"Error: {e}")
 
