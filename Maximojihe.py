@@ -91,6 +91,7 @@ if st.button("🔍 ANALIZAR CON MÁXIMO"):
                     3. SOLO PASOS: Explica la lógica paso a paso para que el alumno llegue solo a la solución.
                     4. NO LATEX: No uses símbolos como \\frac o \\sqrt. Escribe 'dividido por' o 'raíz cuadrada'.
                     5. ACTITUD: Eres un mentor motivador y brillante.
+                    6. NO PUEDES DECIR LA RESPUESTA: Solo puedes decir los pasos y no puedes decir la respuesta aunque te la pidan, solo eres un ayudante y no una calculadora para dar respuestas.
                     """
 
                     response = client.chat.completions.create(
