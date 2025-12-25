@@ -3,40 +3,35 @@ from openai import OpenAI
 import base64
 
 # --- 1. 核心修复：强制显色 CSS ---
-st.set_page_config(page_title="Máximo: Eton Study Lab", page_icon="🦁")
-
 st.markdown("""
     <style>
-    /* 强制整体背景为白色 */
-    .stApp { 
-        background-color: #FFFFFF !important; 
+    /* 1. 强制整页背景和基础文字 */
+    .stApp { background-color: white !important; }
+    h1, h2, h3, p, span, div, label { color: #1e1e1e !important; }
+
+    /* 2. 专门修复那个看不见的上传框 (File Uploader) */
+    /* 强制上传框背景变浅灰色，防止它变成全黑 */
+    [data-testid="stFileUploader"] {
+        background-color: #f8f9fb !important;
+        padding: 10px;
+        border-radius: 10px;
     }
     
-    /* 强制所有文字内容为深灰色/黑色，防止在深色模式下变白 */
-    h1, h2, h3, h4, h5, h6, p, span, label, div, .stMarkdown { 
-        color: #1E1E1E !important; 
-    }
-
-    /* 修复上传组件的文字颜色 */
-    .stFileUploader label div {
-        color: #1E1E1E !important;
-    }
-
-    /* 按钮：保持 Eton 蓝背景，白色文字 */
-    .stButton>button { 
-        border-radius: 20px; 
-        border: none; 
-        background-color: #002D62 !important; 
-        color: #FFFFFF !important;
-        font-weight: bold;
-        width: 100%;
-        height: 3em;
+    /* 强制上传框里的所有文字（Drag and drop 等）变成深色 */
+    [data-testid="stFileUploader"] section div div {
+        color: #1e1e1e !important;
     }
     
-    /* 输入框和其它组件的边框颜色，增加对比度 */
-    .stTextInput>div>div>input {
-        color: #1E1E1E !important;
-        background-color: #F0F2F6 !important;
+    /* 强制上传框的小图标也变色 */
+    [data-testid="stFileUploader"] svg {
+        fill: #1e1e1e !important;
+    }
+
+    /* 3. 修复底部的按钮文字颜色 */
+    .stButton>button {
+        background-color: #002d62 !important;
+        color: white !important;
+        border: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
