@@ -2,21 +2,29 @@ import streamlit as st
 from openai import OpenAI
 import base64
 
-# --- 1. CONFIGURACIÓN DE LA PÁGINA (网页标签页图标) ---
-# 确保你 GitHub 里的文件名确实是 maximojihe.png
+# --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(
     page_title="Máximojihe", 
-    page_icon="maximojihe.png", 
+    page_icon="maximojihe.png", # 浏览器标签页图标
     layout="centered"
 )
 
-# --- 2. 视觉 CSS (白底黑字 + 黑玻璃) ---
+# --- 2. 视觉 CSS 优化 (高清渲染 + 界面样式) ---
 st.markdown("""
     <style>
+    /* 强制图片高清渲染，防止缩放模糊 */
+    img {
+        image-rendering: -webkit-optimize-contrast !important;
+        image-rendering: crisp-edges !important;
+    }
+
+    /* 页面背景白色 */
     .stApp { background-color: #FFFFFF !important; }
+    
+    /* 文字颜色 */
     h1, h2, h3, p, span, label { color: #1E1E1E !important; }
 
-    /* 黑玻璃上传框 */
+    /* 黑玻璃效果上传框 */
     [data-testid="stFileUploader"] {
         background: rgba(30, 30, 30, 0.95) !important;
         backdrop-filter: blur(15px) !important;
@@ -25,10 +33,11 @@ st.markdown("""
     }
     [data-testid="stFileUploader"] * { color: #FFFFFF !important; }
 
-    /* 输入框样式 */
-    .stTextArea textarea {
-        background-color: #F0F2F6 !important;
-        color: #000000 !important;
+    /* 聊天头像高清化 */
+    [data-testid="stChatMessageAvatarAssistant"] img {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 8px !important;
     }
 
     /* Eton 蓝按钮 */
@@ -37,11 +46,7 @@ st.markdown("""
         color: #FFFFFF !important;
         border-radius: 25px !important;
         font-weight: bold !important;
-    }
-    
-    /* 隐藏头像旁的默认样式 */
-    [data-testid="stChatMessageAvatarAssistant"] {
-        background-color: transparent !important;
+        height: 3.5em !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -54,22 +59,25 @@ def encode_image(image_file):
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 # --- 4. 界面布局 ---
-# 用 st.columns 让标题和鹿头并排显示
-col1, col2 = st.columns([0.1, 0.9])
+# 使用 st.columns 优化顶部 LOGO 显示，防止拉伸
+col1, col2 = st.columns([0.15, 0.85])
 with col1:
-    st.image("maximojihe.png", width=50) # 标题旁也放一个鹿
+    # 这里的 width=60 是为了在保持清晰度的同时控制大小
+    st.image("maximojihe.png", width=60) 
 with col2:
     st.title("Máximojihe")
 
 st.write("¡Qué onda! Sube tu duda. Aquí razonamos como cracks.")
 
+# 上传
 uploaded_file = st.file_uploader("1. Sube tu ejercicio:", type=['png', 'jpg', 'jpeg'])
 if uploaded_file:
     st.image(uploaded_file, use_container_width=True)
 
+# 输入
 user_text = st.text_area("2. Escribe tu duda aquí:", placeholder="Ej: No entiendo este paso...")
 
-# --- 5. 核心逻辑 (AI 回复头像换成鹿) ---
+# --- 5. 核心逻辑 (AI 回复头像) ---
 if st.button("🔍 CONSULTAR CON MÁXIMO"):
     if not uploaded_file and not user_text:
         st.warning("¡Oye! Pon algo para que pueda ayudarte. 😉")
@@ -87,10 +95,10 @@ if st.button("🔍 CONSULTAR CON MÁXIMO"):
 
                 st.divider()
                 
-                # --- 这里是关键：avatar 参数直接用你的图片文件名 ---
+                # 聊天消息头像使用本地高清原图
                 with st.chat_message("assistant", avatar="maximojihe.png"):
                     system_prompt = """
-                    Eres Máximojihe, el tutor pro del Eton. 
+                    Eres Máximojihe, el tutor pro del Eton CDMX. 
                     REGLAS:
                     1. NUNCA des el resultado final.
                     2. PROHIBIDO usar LaTeX (\boxed{}).
@@ -111,4 +119,4 @@ if st.button("🔍 CONSULTAR CON MÁXIMO"):
                 st.error(f"Error: {e}")
 
 st.markdown("---")
-st.caption("🇲🇽 Eton School | Máximojihe")
+st.caption("🇲🇽 Eton School Pride | Máximojihe")
