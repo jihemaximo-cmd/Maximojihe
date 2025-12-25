@@ -90,60 +90,49 @@ if uploaded_file:
 
 user_text = st.text_area("2. Cuéntame tu duda específica:", height=100, placeholder="Ej: ¿Qué propiedad de logaritmos debo usar aquí?")
 
-# --- 5. MOTOR DE RAZONAMIENTO REFORZADO ---
+# --- 5. MOTOR DE RAZONAMIENTO REFORZADO (加固版) ---
 if st.button("🔍 ANALIZAR PASO A PASO"):
     if not uploaded_file and not user_text:
-        st.warning("Por favor, proporciona una imagen o una duda escrita. 😉")
+        st.warning("¡Oye! Sube una imagen o escribe algo. 😉")
     else:
-        with st.spinner("Máximojihe está conectando con el conocimiento..."):
+        with st.spinner("Máximojihe razonando..."):
             try:
-                # PASO A: OCR DETALLADO
-                context_img = "No hay imagen disponible."
-                if uploaded_file:
-                    b64_img = process_image(uploaded_file)
-                    ocr_res = client.chat.completions.create(
-                        model="THUDM/GLM-4.1V-9B-Thinking",
-                        messages=[{
-                            "role": "user", 
-                            "content": [
-                                {"type": "text", "text": "Extract and describe all mathematical symbols and text. Be precise."},
-                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}}
-                            ]
-                        }]
-                    )
-                    context_img = ocr_res.choices[0].message.content
+                # 1. 强制重置图片流，防止读取失败
+                uploaded_file.seek(0) 
+                b64_img = process_image(uploaded_file)
+                
+                # 2. 强化 OCR 指令：命令它必须描述出数学逻辑
+                ocr_res = client.chat.completions.create(
+                    model="THUDM/GLM-4.1V-9B-Thinking",
+                    messages=[{"role": "user", "content": [
+                        {"type": "text", "text": "Identify and transcribe ALL mathematical expressions in this image. Do not say you cannot see it."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}}
+                    ]}]
+                )
+                context_img = ocr_res.choices[0].message.content
 
-                st.divider()
-
-                # PASO B: RESPUESTA DEL TUTOR
+                # 3. 这里的 System Prompt 是灵魂，防止它说中文
                 with st.chat_message("assistant", avatar="maximojihe.png"):
-                    # Instrucciones de blindaje total
                     sys_prompt = """
-                    Eres Máximojihe, tutor del Eton School.
-                    TU FILOSOFÍA: Guía socrática. Ayuda al alumno a pensar.
+                    Eres Máximojihe, el tutor de élite del Eton School. 
+                    TU MISIÓN: Guiar al alumno paso a paso EXCLUSIVAMENTE en ESPAÑOL.
                     
-                    REGLAS INQUEBRANTABLES:
-                    1. IDIOMA: Solo Español Mexicano fluido. NUNCA uses chino ni inglés.
-                    2. ANTI-RESPUESTA: No des valores numéricos finales. Si el problema es x+2=4, no digas x=2. Di 'resta 2 en ambos lados'.
-                    3. FORMATO: Texto plano claro. PROHIBIDO LaTeX (no \, no {}, no frac). Usa 'dividido por', 'raiz de', etc.
-                    4. VISIBILIDAD: Usa listas con puntos para separar los pasos.
-                    5. RESPONSABILIDAD: Si la imagen está incompleta, descríbelo y pregunta al alumno.
+                    REGLAS DE ORO:
+                    1. PROHIBIDO EL CHINO: Bajo ninguna circunstancia uses caracteres chinos.
+                    2. PROHIBIDO DAR LA RESPUESTA: Solo da los pasos lógicos.
+                    3. SI NO VES LA IMAGEN: No te rindas. Usa el texto que el alumno escribió para deducir el problema.
+                    4. FORMATO: Usa puntos claros. No uses LaTeX.
                     """
 
-                    full_prompt = f"Contexto matemático: {context_img}. Duda del alumno: {user_text}."
-                    
+                    # 强制加入当前环境提示
                     response = client.chat.completions.create(
                         model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
                         messages=[
                             {"role": "system", "content": sys_prompt},
-                            {"role": "user", "content": full_prompt}
+                            {"role": "user", "content": f"Contexto de la imagen (OCR): {context_img}. Duda del alumno: {user_text}. Responde solo en español y guíame."}
                         ],
                         stream=True
                     )
                     st.write_stream(response)
-
             except Exception as e:
-                st.error(f"Hubo un inconveniente en la conexión: {str(e)}")
-
-st.markdown("---")
-st.caption("© 2025 Eton School - Departamento de Matemáticas | Excelencia y Honor")
+                st.error(f"Error crítico: {e}")
