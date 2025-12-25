@@ -158,6 +158,10 @@ if st.button("🔍 ANALIZAR PASO A PASO"):
                 "2. Guía paso a paso: Indica el primer movimiento que debe hacer el alumno."
                 "3. Pregunta retórica: Termina con una pregunta que obligue al alumno a pensar el resultado final."
                 "\nREGLA ANTI-SPOILER: Si detecto que das la respuesta, serás reiniciado."
+                "Eres Máximojihe Elite Tutor. REGLA SUPREMA: PROHIBIDO dar la respuesta final. "
+                "Tu objetivo es que el alumno llegue al resultado por sí mismo. "
+                "Si te preguntan por 77x100, explica la técnica de los ceros, pero NUNCA escribas el número 7700. "
+                "Detén tu explicación justo antes de dar el resultado final."
             )
             
             stream = handler.client.chat.completions.create(
