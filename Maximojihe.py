@@ -5,9 +5,10 @@ import base64
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 # 把 page_icon 设置为你的图片文件名
+# --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(
     page_title="Máximojihe", 
-    page_icon="https://lh3.googleusercontent.com/gg-dl/ABS2GSlWTwxoJ3i6yCNz784pGxVWw5wjXwftjZd6t39fIoXSRHLFm5vXf7XlXXsbgLesUtOCo3y0EGKZBKwOEY6nl-9EA5bxlopvl662EcUbKuNU4fN-c844M36Cq5LWuALYrmCdI9OzJiGmPxY51sdMeP8mSQ49LNrglx8Jyu9Hzd0QVCpq=s1024-rj",  # 这里填入你上传的图片文件名
+    page_icon="Maximojihe.png",  # 直接调用仓库本地文件，100% 成功显示
     layout="centered"
 )
 # --- 2. CSS INTEGRADO: BLANCO, NEGRO GLASS Y TEXTO LEGIBLE ---
