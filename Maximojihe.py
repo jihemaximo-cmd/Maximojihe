@@ -9,7 +9,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. 4K 极清视觉优化 CSS ---
+# --- 2. 视觉 CSS (黑玻璃风格全家桶) ---
 st.markdown("""
     <style>
     /* 核心：高清渲染算法 */
@@ -19,16 +19,16 @@ st.markdown("""
         -ms-interpolation-mode: nearest-neighbor !important;
     }
 
-    /* 优化聊天头像：增加像素密度感 */
+    /* 优化聊天头像 */
     [data-testid="stChatMessageAvatarAssistant"] {
         width: 40px !important;
         height: 40px !important;
-        border: 1px solid rgba(0,0,0,0.05); /* 极细边框增加精致感 */
+        border: 1px solid rgba(0,0,0,0.05);
         border-radius: 10px !important;
         overflow: hidden !important;
     }
 
-    /* 页面基础样式 */
+    /* 页面基础样式 (白底黑字) */
     .stApp { background-color: #FFFFFF !important; }
     h1, h2, h3, p, span, label { color: #1E1E1E !important; }
 
@@ -38,20 +38,30 @@ st.markdown("""
         backdrop-filter: blur(20px) !important;
         border-radius: 20px !important;
         padding: 25px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
     [data-testid="stFileUploader"] * { color: #FFFFFF !important; }
 
-    /* 按钮：Eton 蓝色 */
+    /* --- 🆕 新增：黑玻璃按钮样式 --- */
     .stButton>button {
-        background-color: #002D62 !important;
+        /* 黑色半透明磨砂背景 */
+        background: rgba(30, 30, 30, 0.85) !important;
+        backdrop-filter: blur(15px) !important;
+        /* 白色醒目文字 */
         color: #FFFFFF !important;
+        /* 边框和圆角 */
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
         border-radius: 30px !important;
         font-weight: 800 !important;
-        transition: 0.3s;
+        height: 3.5em !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
     }
+    /* 鼠标悬停效果：稍微变亮，浮起 */
     .stButton>button:hover {
-        background-color: #003d85 !important;
-        transform: scale(1.02);
+        background: rgba(50, 50, 50, 0.95) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.3) !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -66,7 +76,6 @@ def encode_image(image_file):
 # --- 4. 页面头部 ---
 col1, col2 = st.columns([0.15, 0.85])
 with col1:
-    # 针对 4K 屏幕，手动控制显示宽度
     st.image("maximojihe.png", width=65) 
 with col2:
     st.title("Máximojihe")
@@ -80,6 +89,7 @@ if uploaded_file:
 
 user_text = st.text_area("2. Escribe tu duda:", placeholder="Ej: ¿Cómo empiezo este problema?")
 
+# 这个按钮现在是黑玻璃风格了！
 if st.button("🔍 ANALIZAR CON MÁXIMO"):
     if not uploaded_file and not user_text:
         st.warning("¡Oye! Pon algo para que pueda ayudarte. 😉")
@@ -97,7 +107,6 @@ if st.button("🔍 ANALIZAR CON MÁXIMO"):
 
                 st.divider()
                 
-                # 聊天头像使用高清原图
                 with st.chat_message("assistant", avatar="maximojihe.png"):
                     system_prompt = """
                     Eres Máximojihe, el tutor pro del Eton. 
