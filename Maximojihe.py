@@ -4,139 +4,131 @@ from openai import OpenAI
 import base64
 from PIL import Image, ImageOps
 import io
-import traceback
 import re
 
 # =================================================================
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN (ORDEN ESTRICTO PARA EVITAR NAMEERROR)
 # =================================================================
 API_KEY = "sk-rbafssagtaksrelgfqnzbhdjqtlhdmgthtlwskejckajcejl"
 BASE_URL = "https://api.siliconflow.cn/v1"
 
-st.set_page_config(page_title="Máximojihe Elite", page_icon="maximojihe.png", layout="wide")
+st.set_page_config(
+    page_title="Máximojihe Elite", 
+    page_icon="maximojihe.png", 
+    layout="wide"
+)
 
 # =================================================================
-# 2. CONTROL VISUAL (CSS) - NEGRO PARA CAJAS, BLANCO PARA TEXTO LIBRE
+# 2. ESTILO VISUAL (NEGRO PARA CAJAS, BLANCO PARA FONDO)
 # =================================================================
 st.markdown("""
     <style>
-    /* 1. Fondo base: Blanco */
     .stApp { background-color: #FFFFFF !important; }
-    
-    /* 2. Áreas sin cuadro: Texto Negro (Títulos, AI y etiquetas) */
     .stMarkdown, h1, h2, h3, p, span, label, .stChatMessage { 
         color: #000000 !important; 
-        font-family: 'Helvetica', sans-serif !important; 
+        font-family: sans-serif !important;
     }
-    
-    /* Fondo de mensajes AI suave para contraste */
-    .stChatMessage {
-        background-color: #F0F2F6 !important;
-        border-radius: 15px !important;
-    }
-
-    /* 3. Áreas con cuadro negro: Texto Blanco (Subida e Input) */
+    .stChatMessage { background-color: #F0F2F6 !important; border-radius: 15px !important; }
     [data-testid="stFileUploader"] {
         background-color: #000000 !important;
         border-radius: 20px !important;
-        padding: 20px !important;
+        padding: 15px !important;
     }
-    [data-testid="stFileUploader"] * {
-        color: #FFFFFF !important;
-    }
-
+    [data-testid="stFileUploader"] * { color: #FFFFFF !important; }
     .stTextArea textarea {
         background-color: #000000 !important;
         color: #FFFFFF !important;
         border-radius: 20px !important;
-        padding: 15px !important;
-        font-size: 16px !important;
-        border: none !important;
     }
-    .stTextArea textarea::placeholder {
-        color: #AAAAAA !important;
-    }
-
-    /* 4. Botón: Fondo Negro, Texto Blanco */
     .stButton>button {
         background-color: #000000 !important;
-        border: 2px solid #000000 !important;
+        color: #FFFFFF !important;
         border-radius: 100px !important;
         height: 60px !important;
         width: 100% !important;
-        max-width: 300px !important;
-        display: block !important;
-        margin: 0 auto !important;
-    }
-    .stButton>button p, .stButton>button span {
-        color: #FFFFFF !important;
         font-weight: bold !important;
-        font-size: 18px !important;
+        border: none !important;
     }
-    .stButton>button:hover {
-        background-color: #333333 !important;
-        border-color: #333333 !important;
-    }
-
-    /* Ocultar elementos de Streamlit */
     #MainMenu, footer, header { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
 # =================================================================
-# 3. MOTOR DE FILTRADO (SIN CHINO, SIN SPOILERS)
+# 3. MOTOR ELITE
 # =================================================================
 class EliteEngine:
     def __init__(self, key):
         self.client = OpenAI(api_key=key, base_url=BASE_URL)
 
-    def limpiar_chino(self, text):
-        # Elimina cualquier carácter chino
-        return re.sub(r'[\u4e00-\u9fff]+', '', text)
-
-    def filtrar_respuesta(self, stream):
-        is_thinking = False
-        # Lista de bloqueos para evitar que suelte el resultado
-        bloqueo = ["6600", "9900", "8800", "7700", "La respuesta es", "Resultado final", "\\boxed"]
-        
-        texto_acumulado = ""
-        for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                contenido = chunk.choices[0].delta.content
-                if "<think>" in contenido:
-                    is_thinking = True
-                    continue
-                if "</think>" in contenido:
-                    is_thinking = False
-                    continue
-                
-                if not is_thinking:
-                    contenido = self.limpiar_chino(contenido)
-                    texto_acumulado += contenido
-                    
-                    # Si detecta spoiler, corta la transmisión
-                    if any(palabra in texto_acumulado for palabra in bloqueo):
-                        yield "\n\n**[Concepto explicado. ¡Ahora aplica la regla tú mismo para hallar el número final!]**"
-                        break
-                    yield contenido
+    def limpiar_texto(self, text):
+        # Elimina símbolos de dólar y barras invertidas que rompen el móvil
+        text = text.replace('$', '').replace('\\', ' ')
+        # Elimina caracteres chinos
+        text = re.sub(r'[\u4e00-\u9fff]+', '', text)
+        return text
 
 engine = EliteEngine(API_KEY)
 
 # =================================================================
-# 4. DISEÑO DE PÁGINA (ESPAÑOL)
+# 4. INTERFAZ (ESPAÑOL)
 # =================================================================
-col_logo, col_titulo = st.columns([0.2, 0.8])
-with col_logo:
-    if os.path.exists("maximojihe.png"):
-        st.image("maximojihe.png", width=120)
-with col_titulo:
-    st.markdown("<h1 style='padding-top:20px;'>Máximojihe Elite</h1>", unsafe_allow_html=True)
+if os.path.exists("maximojihe.png"):
+    st.image("maximojihe.png", width=100)
+else:
+    st.title("Máximojihe")
 
-st.markdown("---")
+st.markdown("### Tutor Privado de Élite")
 
-# Áreas de entrada
 archivo = st.file_uploader("PASO 1: SUBE TU EJERCICIO", type=['png', 'jpg', 'jpeg'])
 if archivo:
     st.image(archivo, use_container_width=True)
 
-duda = st.text_area("PASO 2: ¿QUÉ PARTE NO ENTIENDES?", placeholder="Describe
+# Esta es la línea que fallaba, ahora está bien cerrada
+duda = st.text_area("PASO 2: ¿QUÉ PARTE NO ENTIENDES?", placeholder="Describe tu duda aquí...")
+
+# =================================================================
+# 5. LÓGICA DE PROCESAMIENTO
+# =================================================================
+if st.button("ANALIZAR PASO A PASO"):
+    if not archivo and not duda.strip():
+        st.stop()
+
+    with st.chat_message("assistant", avatar="maximojihe.png" if os.path.exists("maximojihe.png") else None):
+        try:
+            # Visión (OCR)
+            ocr_text = ""
+            if archivo:
+                b64 = base64.b64encode(archivo.getvalue()).decode()
+                res_v = engine.client.chat.completions.create(
+                    model="THUDM/GLM-4.1V-9B-Thinking",
+                    messages=[{"role": "user", "content": [
+                        {"type": "text", "text": "OCR texto matemático."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
+                    ]}]
+                )
+                ocr_text = res_v.choices[0].message.content
+
+            # Respuesta R1
+            sys_msg = (
+                "Eres Máximojihe. Usa SOLO texto plano. "
+                "No uses $ ni LaTeX. No uses chino. "
+                "No des la respuesta final. Guía al alumno en español."
+            )
+            
+            respuesta = engine.client.chat.completions.create(
+                model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+                messages=[
+                    {"role": "system", "content": sys_msg},
+                    {"role": "user", "content": f"Contexto: {ocr_text}\nDuda: {duda}"}
+                ]
+            )
+            
+            contenido = respuesta.choices[0].message.content
+            
+            # Bloqueo de resultados
+            bloqueos = ["6600", "9900", "8800", "7700", "4400"]
+            for n in bloqueos:
+                if n in contenido:
+                    contenido = contenido.split(n)[0] + "\n\n**[Método explicado. ¡Calcula el final tú mismo!]**"
+                    break
+         
